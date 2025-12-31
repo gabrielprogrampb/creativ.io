@@ -1,3 +1,19 @@
+// =============================================================================
+// App.tsx - Componente Principal de Creativ.io
+// =============================================================================
+// Descripción: Aplicación SPA para una agencia de soluciones creativas.
+// Maneja el enrutamiento basado en hash, autenticación de admin, y gestión
+// de servicios y mensajes.
+// 
+// Rutas:
+// - #home (o vacío) : Página de inicio
+// - #services       : Lista de servicios
+// - #service/{id}   : Detalle de un servicio
+// - #contact        : Formulario de contacto
+// - #admin/login    : Login de administrador
+// - #admin/dashboard: Panel de administración
+// =============================================================================
+
 import React, { useState, useEffect } from 'react';
 import HomePage from './pages/HomePage';
 import ServicesPage from './pages/ServicesPage';
@@ -9,82 +25,107 @@ import { services as initialServices } from './data/services';
 import { messages as initialMessages } from './data/messages';
 import { Service, Message } from './types';
 
+/**
+ * Componente principal de la aplicación
+ * Gestiona el estado global y el enrutamiento
+ */
 const App: React.FC = () => {
+  // Estado de navegación
   const [currentPage, setCurrentPage] = useState('home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  
+
+  // Estado de datos
   const [services, setServices] = useState<Service[]>(initialServices);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 
-  // --- Routing ---
+  // ==========================================================================
+  // SISTEMA DE ENRUTAMIENTO
+  // ==========================================================================
+
   useEffect(() => {
+    /**
+     * Extrae el identificador de página del hash de la URL
+     * @returns El nombre de la página actual
+     */
     const getPageFromHash = () => {
-      // Get the page identifier from the hash, or default to 'home'
       return window.location.hash.substring(1) || 'home';
     };
 
-    // Set the initial page based on the current hash
+    // Establecer página inicial basada en el hash actual
     setCurrentPage(getPageFromHash());
 
-    // Listen for hash changes (e.g., browser back/forward buttons)
+    // Escuchar cambios en el hash (botones atrás/adelante del navegador)
     const handleHashChange = () => {
       setCurrentPage(getPageFromHash());
     };
 
     window.addEventListener('hashchange', handleHashChange, false);
 
-    // Cleanup listener on component unmount
+    // Limpiar listener al desmontar
     return () => {
       window.removeEventListener('hashchange', handleHashChange, false);
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  // --- SEO: Dynamic Page Title ---
+  // ==========================================================================
+  // SEO: TÍTULO DINÁMICO DE PÁGINA
+  // ==========================================================================
+
   useEffect(() => {
     let title = 'Creativ.io | Soluciones Creativas';
-    
+
+    // Título para páginas de detalle de servicio
     if (currentPage.startsWith('service/')) {
-        const serviceId = currentPage.split('/')[1];
-        const service = services.find(s => s.id === serviceId);
-        if (service) {
-            title = `${service.title} | Creativ.io`;
-        } else {
-            title = 'Servicio no Encontrado | Creativ.io';
-        }
+      const serviceId = currentPage.split('/')[1];
+      const service = services.find(s => s.id === serviceId);
+      if (service) {
+        title = `${service.title} | Creativ.io`;
+      } else {
+        title = 'Servicio no Encontrado | Creativ.io';
+      }
     } else {
-        switch (currentPage) {
-            case 'home':
-                title = 'Creativ.io | Soluciones Creativas para tu Negocio';
-                break;
-            case 'services':
-                title = 'Nuestros Servicios | Creativ.io';
-                break;
-            case 'contact':
-                title = 'Contacto | Creativ.io';
-                break;
-            case 'admin/login':
-                title = 'Admin Login | Creativ.io';
-                break;
-            case 'admin/dashboard':
-                title = 'Admin Dashboard | Creativ.io';
-                break;
-        }
+      // Títulos para otras páginas
+      switch (currentPage) {
+        case 'home':
+          title = 'Creativ.io | Soluciones Creativas para tu Negocio';
+          break;
+        case 'services':
+          title = 'Nuestros Servicios | Creativ.io';
+          break;
+        case 'contact':
+          title = 'Contacto | Creativ.io';
+          break;
+        case 'admin/login':
+          title = 'Admin Login | Creativ.io';
+          break;
+        case 'admin/dashboard':
+          title = 'Admin Dashboard | Creativ.io';
+          break;
+      }
     }
     document.title = title;
   }, [currentPage, services]);
 
+  /**
+   * Navega a una página específica
+   * @param page - Identificador de la página destino
+   */
   const navigateTo = (page: string) => {
-    // Update the hash to trigger navigation.
-    // The 'hashchange' listener will handle the state update.
-    // For the 'home' page, we use an empty hash for a cleaner URL.
+    // Actualizar el hash para disparar la navegación
     window.location.hash = page === 'home' ? '' : page;
     window.scrollTo(0, 0);
   };
 
-  // --- Auth Handlers ---
+  // ==========================================================================
+  // MANEJADORES DE AUTENTICACIÓN
+  // ==========================================================================
+
+  /**
+   * Intenta iniciar sesión con las credenciales proporcionadas
+   * NOTA: En producción, esto debería ser una llamada segura a API
+   */
   const handleLogin = (email: string, password: string) => {
-    // NOTE: In a real app, this would be a secure API call.
-    // For demo purposes, use hardcoded credentials.
+    // Credenciales de demo (cambiar en producción)
     if (email === 'admin@gmail.com' && password === 'admin123') {
       setIsAdminLoggedIn(true);
       navigateTo('admin/dashboard');
@@ -93,12 +134,21 @@ const App: React.FC = () => {
     return false;
   };
 
+  /**
+   * Cierra la sesión del administrador
+   */
   const handleLogout = () => {
     setIsAdminLoggedIn(false);
     navigateTo('home');
   };
 
-  // --- Message Handlers ---
+  // ==========================================================================
+  // MANEJADORES DE MENSAJES
+  // ==========================================================================
+
+  /**
+   * Agrega un nuevo mensaje de contacto
+   */
   const addMessage = (formData: Omit<Message, 'id' | 'timestamp'>) => {
     const newMessage: Message = {
       id: `msg-${Date.now()}`,
@@ -108,57 +158,80 @@ const App: React.FC = () => {
     setMessages(prev => [newMessage, ...prev]);
   };
 
+  /**
+   * Elimina un mensaje por su ID
+   */
   const deleteMessage = (id: string) => {
     setMessages(prev => prev.filter(msg => msg.id !== id));
   };
-  
-  // --- Service Handlers ---
+
+  // ==========================================================================
+  // MANEJADORES DE SERVICIOS
+  // ==========================================================================
+
+  /**
+   * Agrega un nuevo servicio
+   */
   const addService = (service: Omit<Service, 'id'>) => {
     const newService: Service = {
-        id: `service-${Date.now()}`,
-        ...service
+      id: `service-${Date.now()}`,
+      ...service
     };
     setServices(prev => [...prev, newService]);
   };
 
+  /**
+   * Actualiza un servicio existente
+   */
   const updateService = (updatedService: Service) => {
     setServices(prev => prev.map(s => s.id === updatedService.id ? updatedService : s));
   };
 
+  /**
+   * Elimina un servicio por su ID
+   */
   const deleteService = (id: string) => {
     setServices(prev => prev.filter(s => s.id !== id));
   };
 
+  // ==========================================================================
+  // RENDERIZADO DE PÁGINAS
+  // ==========================================================================
+
+  /**
+   * Renderiza la página correspondiente según la ruta actual
+   */
   const renderPage = () => {
-    // Admin Routes
+    // Rutas de administración
     if (currentPage.startsWith('admin/')) {
-        if (currentPage === 'admin/login') {
-            return <AdminLoginPage onLogin={handleLogin} />;
-        }
-        if (isAdminLoggedIn) {
-            return (
-                <AdminDashboardPage 
-                    services={services}
-                    messages={messages}
-                    onLogout={handleLogout}
-                    onAddService={addService}
-                    onUpdateService={updateService}
-                    onDeleteService={deleteService}
-                    onDeleteMessage={deleteMessage}
-                />
-            );
-        }
-        // If not logged in and trying to access admin, redirect to login
-        navigateTo('admin/login');
+      if (currentPage === 'admin/login') {
         return <AdminLoginPage onLogin={handleLogin} />;
+      }
+      if (isAdminLoggedIn) {
+        return (
+          <AdminDashboardPage
+            services={services}
+            messages={messages}
+            onLogout={handleLogout}
+            onAddService={addService}
+            onUpdateService={updateService}
+            onDeleteService={deleteService}
+            onDeleteMessage={deleteMessage}
+          />
+        );
+      }
+      // Si no está logueado, redirigir al login
+      navigateTo('admin/login');
+      return <AdminLoginPage onLogin={handleLogin} />;
     }
 
-    // Public Routes
+    // Rutas públicas - Detalle de servicio
     if (currentPage.startsWith('service/')) {
       const serviceId = currentPage.split('/')[1];
       return <ServiceDetailPage serviceId={serviceId} services={services} navigateTo={navigateTo} />;
     }
 
+    // Rutas públicas - Páginas principales
     switch (currentPage) {
       case 'home':
         return <HomePage navigateTo={navigateTo} services={services} addMessage={addMessage} />;
@@ -167,7 +240,7 @@ const App: React.FC = () => {
       case 'contact':
         return <ContactPage navigateTo={navigateTo} addMessage={addMessage} />;
       default:
-        // Fallback to home page for any unknown route
+        // Fallback a página de inicio para rutas desconocidas
         return <HomePage navigateTo={navigateTo} services={services} addMessage={addMessage} />;
     }
   };
